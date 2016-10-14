@@ -14,9 +14,11 @@ import java.util.List;
  * @author bingoohuang [bingoohuang@gmail.com] Created on 2016/10/13.
  */
 public class SqlCaringParser {
+    private final SqlBusConfig sqlBusConfig;
     private final String rawSql;
 
-    public SqlCaringParser(String rawSql) {
+    public SqlCaringParser(SqlBusConfig sqlBusConfig, String rawSql) {
+        this.sqlBusConfig = sqlBusConfig;
         this.rawSql = rawSql;
     }
 
@@ -43,7 +45,7 @@ public class SqlCaringParser {
     }
 
     private boolean contains(String table, RawSqlType rawSqlType) {
-        RawSqlType[] carings = SqlBusConfig.getCarings(table);
+        RawSqlType[] carings = sqlBusConfig.getCarings(table);
         if (carings == null) return false;
 
         for (RawSqlType caring : carings)

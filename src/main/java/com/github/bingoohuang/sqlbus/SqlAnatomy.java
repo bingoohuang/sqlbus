@@ -1,6 +1,5 @@
 package com.github.bingoohuang.sqlbus;
 
-import com.alibaba.fastjson.annotation.JSONField;
 import lombok.Getter;
 
 /**
@@ -17,7 +16,6 @@ public class SqlAnatomy {
         this.table = tableName;
     }
 
-    @JSONField(serialize = false)
     public boolean isCaredSql() {
         return rawSqlType != RawSqlType.NA;
     }

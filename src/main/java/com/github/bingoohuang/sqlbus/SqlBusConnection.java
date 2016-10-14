@@ -11,10 +11,13 @@ import java.sql.PreparedStatement;
 /**
  * @author bingoohuang [bingoohuang@gmail.com] Created on 2016/10/13.
  */
-public class ConnectionImpl implements InvocationHandler {
+public class SqlBusConnection implements InvocationHandler {
+    private final SqlBusConfig sqlBusConfig;
     private final Connection connection;
 
-    public ConnectionImpl(Connection connection) {
+    private SqlBusConnection(
+            SqlBusConfig sqlBusConfig, Connection connection) {
+        this.sqlBusConfig = sqlBusConfig;
         this.connection = connection;
     }
 
@@ -26,9 +29,9 @@ public class ConnectionImpl implements InvocationHandler {
         val methodName = method.getName();
         if (methodName.equals("prepareStatement")) {
             val sql = (String) args[0];
-            if (isCaredSql(sql)) {
+            if (sqlBusConfig.isCaredSql(sql)) {
                 val ps = (PreparedStatement) method.invoke(connection, args);
-                return new PreparedStatementImpl(ps, sql).createProxy();
+                return SqlBusPreparedStatement.proxy(sqlBusConfig, ps, sql);
             }
         }
 
@@ -37,13 +40,12 @@ public class ConnectionImpl implements InvocationHandler {
         return invoke;
     }
 
-    public Connection createProxy() {
-        return (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
-                new Class<?>[]{Connection.class}, this);
+    public static Connection proxy(
+            SqlBusConfig sqlBusConfig, Connection connection) {
+        val impl = new SqlBusConnection(sqlBusConfig, connection);
+        return (Connection) Proxy.newProxyInstance(
+                impl.getClass().getClassLoader(),
+                new Class<?>[]{Connection.class}, impl);
     }
 
-    // 是否是受关注的SQL语句
-    private boolean isCaredSql(String sql) {
-        return SqlCaringCache.isCaredSql(sql);
-    }
 }

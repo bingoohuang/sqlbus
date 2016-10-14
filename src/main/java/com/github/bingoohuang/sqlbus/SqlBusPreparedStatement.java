@@ -1,9 +1,6 @@
 package com.github.bingoohuang.sqlbus;
 
-import com.alibaba.fastjson.JSON;
 import lombok.val;
-import org.hjson.JsonValue;
-import org.hjson.Stringify;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -18,18 +15,21 @@ import static java.lang.reflect.Proxy.newProxyInstance;
 /**
  * @author bingoohuang [bingoohuang@gmail.com] Created on 2016/10/13.
  */
-public class PreparedStatementImpl implements InvocationHandler {
+public class SqlBusPreparedStatement implements InvocationHandler {
+    final SqlBusConfig sqlBusConfig;
     final PreparedStatement statement;
     final String rawSql;
     final Map<Integer, Object> parameters = new TreeMap<Integer, Object>();
     final SqlAnatomy sqlAnatomy;
 
-    public PreparedStatementImpl(
+    private SqlBusPreparedStatement(
+            SqlBusConfig sqlBusConfig,
             PreparedStatement statement,
             String sql) {
+        this.sqlBusConfig = sqlBusConfig;
         this.statement = statement;
         this.rawSql = sql;
-        this.sqlAnatomy = SqlCaringCache.getSqlAnatomy(rawSql);
+        this.sqlAnatomy = sqlBusConfig.getSqlAnatomy(rawSql);
     }
 
     @Override
@@ -49,27 +49,35 @@ public class PreparedStatementImpl implements InvocationHandler {
     }
 
     private void executeUpdate() {
-        val updateSqlAnatomy= new UpdateSqlAnatomy(sqlAnatomy, createParameters());
-        String json = JSON.toJSONString(updateSqlAnatomy);
+        SqlBusEvent sqlBusEvent = new SqlBusEvent(
+                sqlAnatomy.getTable(),
+                sqlAnatomy.getRawSqlType(),
+                sqlAnatomy.getRawSql(),
+                createParameters()
+        );
 
+        sqlBusConfig.post(sqlBusEvent);
         parameters.clear();
 
-        String hjson = JsonValue.readHjson(json).toString(Stringify.HJSON);
-        System.out.println(hjson);
     }
 
-    private List<String> createParameters() {
+    private List<Object> createParameters() {
         int size = parameters.size();
-        val listParameters = new ArrayList<String>(size);
+        val listParameters = new ArrayList<Object>(size);
         for (Map.Entry<Integer, Object> entry : parameters.entrySet()) {
-            listParameters.add(entry.getValue().toString());
+            listParameters.add(entry.getValue());
         }
 
         return listParameters;
     }
 
-    public PreparedStatement createProxy() {
-        return (PreparedStatement) newProxyInstance(getClass().getClassLoader(),
-                new Class<?>[]{PreparedStatement.class}, this);
+    public static PreparedStatement proxy(
+            SqlBusConfig sqlBusConfig,
+            PreparedStatement statement,
+            String sql) {
+        val impl = new SqlBusPreparedStatement(sqlBusConfig, statement, sql);
+        return (PreparedStatement) newProxyInstance(
+                impl.getClass().getClassLoader(),
+                new Class<?>[]{PreparedStatement.class}, impl);
     }
 }
