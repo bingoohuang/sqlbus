@@ -1,40 +1,37 @@
 package com.github.bingoohuang.sqlbus;
 
 import com.alibaba.fastjson.annotation.JSONField;
-
-import java.util.List;
+import lombok.Getter;
 
 /**
  * @author bingoohuang [bingoohuang@gmail.com] Created on 2016/10/13.
  */
 public class SqlAnatomy {
-    private final String table;
-    private final List<String> columns;
-    private List<String> parameters;
+    @Getter final RawSqlType rawSqlType;
+    @Getter final String rawSql;
+    @Getter final String table;
 
-    public SqlAnatomy(String table, List<String> columns) {
-        this.table = table;
-        this.columns = columns;
+    public SqlAnatomy(RawSqlType rawSqlType, String rawSql, String tableName) {
+        this.rawSqlType = rawSqlType;
+        this.rawSql = rawSql;
+        this.table = tableName;
     }
 
     @JSONField(serialize = false)
     public boolean isCaredSql() {
-        return true;
+        return rawSqlType != RawSqlType.NA;
     }
 
-    public void setParameters(List<String> parameters) {
-        this.parameters = parameters;
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        SqlAnatomy that = (SqlAnatomy) o;
+
+        return rawSql != null ? rawSql.equals(that.rawSql) : that.rawSql == null;
     }
 
-    public String getTable() {
-        return table;
-    }
-
-    public List<String> getColumns() {
-        return columns;
-    }
-
-    public List<String> getParameters() {
-        return parameters;
+    @Override public int hashCode() {
+        return rawSql != null ? rawSql.hashCode() : 0;
     }
 }

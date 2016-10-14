@@ -37,6 +37,7 @@ public class PreparedStatementImpl implements InvocationHandler {
         String methodName = method.getName();
         if (methodName.equals("setLong")
                 || methodName.equals("setString")
+                || methodName.equals("setInt")
                 || methodName.equals("setObject")
                 || methodName.equals("setTimestamp")) {
             parameters.put((Integer) args[0], args[1]);
@@ -48,8 +49,9 @@ public class PreparedStatementImpl implements InvocationHandler {
     }
 
     private void executeUpdate() {
-        sqlAnatomy.setParameters(createParameters());
-        String json = JSON.toJSONString(sqlAnatomy);
+        val updateSqlAnatomy= new UpdateSqlAnatomy(sqlAnatomy, createParameters());
+        String json = JSON.toJSONString(updateSqlAnatomy);
+
         parameters.clear();
 
         String hjson = JsonValue.readHjson(json).toString(Stringify.HJSON);

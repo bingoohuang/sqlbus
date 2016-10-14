@@ -3,6 +3,7 @@ package com.github.bingoohuang.sqlbus;
 import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr;
 import com.alibaba.druid.sql.dialect.oracle.ast.stmt.OracleInsertStatement;
+import com.alibaba.druid.sql.dialect.oracle.ast.stmt.OracleUpdateStatement;
 import com.alibaba.druid.sql.dialect.oracle.parser.OracleStatementParser;
 import lombok.val;
 
@@ -15,32 +16,54 @@ import java.util.List;
 public class SqlCaringParser {
     private final String rawSql;
 
-    public SqlCaringParser(String sql) {
-        this.rawSql = sql;
+    public SqlCaringParser(String rawSql) {
+        this.rawSql = rawSql;
     }
 
     public SqlAnatomy parse() {
-        val orclParser = new OracleStatementParser(rawSql);
-        val stmt = orclParser.parseStatement();
+        val stmtParser = new OracleStatementParser(rawSql);
+        val stmt = stmtParser.parseStatement();
+
+        SqlAnatomy sqlAnatomy = null;
         if (stmt instanceof OracleInsertStatement) {
-            return parseInsert((OracleInsertStatement)stmt);
+            sqlAnatomy = parseInsert((OracleInsertStatement) stmt);
+        } else if (stmt instanceof OracleUpdateStatement) {
+            sqlAnatomy = parseUpdate((OracleUpdateStatement) stmt);
         }
 
-        return null;
+        if (sqlAnatomy != null) return sqlAnatomy;
+        return new SqlAnatomy(RawSqlType.NA, rawSql, "NA");
+    }
+
+    private SqlAnatomy parseUpdate(OracleUpdateStatement stmt) {
+        val table = stmt.getTableName().getSimpleName();
+        if (!contains(table, RawSqlType.UPDATE)) return null;
+
+        return new SqlAnatomy(RawSqlType.UPDATE, rawSql, table);
+    }
+
+    private boolean contains(String table, RawSqlType rawSqlType) {
+        RawSqlType[] carings = SqlBusConfig.getCarings(table);
+        if (carings == null) return false;
+
+        for (RawSqlType caring : carings)
+            if (caring == rawSqlType) return true;
+
+        return false;
     }
 
     private SqlAnatomy parseInsert(OracleInsertStatement stmt) {
-        val tableName = stmt.getTableName().getSimpleName();
-        val columns = parseColumns(stmt.getColumns());
+        val table = stmt.getTableName().getSimpleName();
+        if (!contains(table, RawSqlType.INSERT)) return null;
 
-        return new SqlAnatomy(tableName, columns);
+        return new SqlAnatomy(RawSqlType.INSERT, rawSql, table);
     }
 
-    private List<String> parseColumns(List<SQLExpr> columns) {
+    private List<String> parseInsertColumns(List<SQLExpr> columns) {
         val columnNames = new ArrayList<String>(columns.size());
-        for (SQLExpr sqlExpr: columns) {
+        for (SQLExpr sqlExpr : columns) {
             if (sqlExpr instanceof SQLIdentifierExpr) {
-                val sqlIdentifierExpr = (SQLIdentifierExpr)sqlExpr;
+                val sqlIdentifierExpr = (SQLIdentifierExpr) sqlExpr;
                 columnNames.add(sqlIdentifierExpr.getName());
             }
         }
