@@ -1,5 +1,8 @@
-package com.github.bingoohuang.sqlbus;
+package com.github.bingoohuang.sqlbus.impl;
 
+import com.github.bingoohuang.sqlbus.SqlBusConfig;
+import com.google.common.reflect.Reflection;
+import lombok.SneakyThrows;
 import lombok.val;
 
 import java.lang.reflect.InvocationHandler;
@@ -9,8 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
-import static java.lang.reflect.Proxy.newProxyInstance;
 
 /**
  * @author bingoohuang [bingoohuang@gmail.com] Created on 2016/10/13.
@@ -48,10 +49,11 @@ public class SqlBusPreparedStatement implements InvocationHandler {
         return method.invoke(statement, args);
     }
 
+    @SneakyThrows
     private void executeUpdate() {
         SqlBusEvent sqlBusEvent = new SqlBusEvent(
                 sqlAnatomy.getTable(),
-                sqlAnatomy.getRawSqlType(),
+                sqlAnatomy.getSqlType(),
                 sqlAnatomy.getRawSql(),
                 createParameters()
         );
@@ -76,8 +78,6 @@ public class SqlBusPreparedStatement implements InvocationHandler {
             PreparedStatement statement,
             String sql) {
         val impl = new SqlBusPreparedStatement(sqlBusConfig, statement, sql);
-        return (PreparedStatement) newProxyInstance(
-                impl.getClass().getClassLoader(),
-                new Class<?>[]{PreparedStatement.class}, impl);
+        return Reflection.newProxy(PreparedStatement.class, impl);
     }
 }

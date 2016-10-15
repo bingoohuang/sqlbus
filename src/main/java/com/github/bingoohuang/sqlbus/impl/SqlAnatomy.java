@@ -1,23 +1,24 @@
-package com.github.bingoohuang.sqlbus;
+package com.github.bingoohuang.sqlbus.impl;
 
+import com.github.bingoohuang.sqlbus.SqlType;
 import lombok.Getter;
 
 /**
  * @author bingoohuang [bingoohuang@gmail.com] Created on 2016/10/13.
  */
 public class SqlAnatomy {
-    @Getter final RawSqlType rawSqlType;
+    @Getter final SqlType sqlType;
     @Getter final String rawSql;
     @Getter final String table;
 
-    public SqlAnatomy(RawSqlType rawSqlType, String rawSql, String tableName) {
-        this.rawSqlType = rawSqlType;
+    public SqlAnatomy(SqlType sqlType, String rawSql, String tableName) {
+        this.sqlType = sqlType;
         this.rawSql = rawSql;
         this.table = tableName;
     }
 
     public boolean isCaredSql() {
-        return rawSqlType != RawSqlType.NA;
+        return sqlType != SqlType.NA;
     }
 
     @Override public boolean equals(Object o) {

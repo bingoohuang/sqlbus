@@ -1,10 +1,11 @@
 package com.github.bingoohuang.sqlbus;
 
+import com.github.bingoohuang.sqlbus.impl.SqlBusPreparedStatement;
+import com.google.common.reflect.Reflection;
 import lombok.val;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
@@ -29,6 +30,7 @@ public class SqlBusConnection implements InvocationHandler {
         val methodName = method.getName();
         if (methodName.equals("prepareStatement")) {
             val sql = (String) args[0];
+
             if (sqlBusConfig.isCaredSql(sql)) {
                 val ps = (PreparedStatement) method.invoke(connection, args);
                 return SqlBusPreparedStatement.proxy(sqlBusConfig, ps, sql);
@@ -43,9 +45,7 @@ public class SqlBusConnection implements InvocationHandler {
     public static Connection proxy(
             SqlBusConfig sqlBusConfig, Connection connection) {
         val impl = new SqlBusConnection(sqlBusConfig, connection);
-        return (Connection) Proxy.newProxyInstance(
-                impl.getClass().getClassLoader(),
-                new Class<?>[]{Connection.class}, impl);
+        return Reflection.newProxy(Connection.class, impl);
     }
 
 }

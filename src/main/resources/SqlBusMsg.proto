@@ -1,0 +1,23 @@
+package com.github.bingoohuang.sqlbus.proto;
+
+// compile with:
+// protoc --java_out=/Users/bingoohuang/github/sqlbus/src/main/java/ SqlBusMsg.proto
+
+option java_package = "com.github.bingoohuang.sqlbus.proto";
+
+option java_outer_classname = "SqlBusMsg";
+
+message SqlBusEventMsgReq {
+    required string hostname = 1;
+    required uint64 timestamp = 2;
+
+    required string table = 3;
+    required string sqlType = 4;
+    required string sql = 5;
+    repeated string parameters = 6;
+}
+
+
+message SqlBusEventMsgRsp {
+}
+

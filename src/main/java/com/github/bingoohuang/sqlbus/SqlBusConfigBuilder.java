@@ -1,13 +1,16 @@
 package com.github.bingoohuang.sqlbus;
 
+import com.github.bingoohuang.sqlbus.impl.SqlBusRemoteWorker;
+import com.github.bingoohuang.sqlbus.netty.SqlBusClient;
+import com.github.bingoohuang.sqlbus.netty.SqlBusNettyConfig;
 import com.google.common.collect.Lists;
-import com.google.common.eventbus.AsyncEventBus;
 import com.google.common.eventbus.EventBus;
 import lombok.val;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
@@ -18,10 +21,10 @@ public class SqlBusConfigBuilder {
         return new SqlBusConfigBuilder();
     }
 
-    Map<String, RawSqlType[]> carings = new HashMap<String, RawSqlType[]>();
+    Map<String, SqlType[]> carings = new HashMap<String, SqlType[]>();
 
-    public SqlBusConfigBuilder care(String table, RawSqlType... rawSqlTypes) {
-        carings.put(table, rawSqlTypes);
+    public SqlBusConfigBuilder care(String table, SqlType... sqlTypes) {
+        carings.put(table, sqlTypes);
         return this;
     }
 
@@ -51,18 +54,28 @@ public class SqlBusConfigBuilder {
 
     public SqlBusConfig build() {
         EventBus configEventBus = makeEventBus();
-        val configCarings = new HashMap<String, RawSqlType[]>(carings);
+        val configCarings = new HashMap<String, SqlType[]>(carings);
 
-        return new SqlBusConfig(configEventBus, configCarings);
+        return new SqlBusConfig(configEventBus, configCarings, sqlBusClient);
     }
+
+    SqlBusClient sqlBusClient;
 
     private EventBus makeEventBus() {
         if (eventBus != null) return eventBus;
 
-        val threadPool = Executors.newFixedThreadPool(1);
-        EventBus configEventBus = new AsyncEventBus(threadPool);
+        EventBus configEventBus = new EventBus();
 
-        if (workers.isEmpty()) workers.add(new RemoteSqlBusWorker());
+        if (workers.isEmpty()) {
+            val config = new SqlBusNettyConfig();
+            sqlBusClient = new SqlBusClient(config);
+            sqlBusClient.connect();
+
+            val worker = new SqlBusRemoteWorker(sqlBusClient);
+
+            workers.add(worker);
+        }
+
         for (Object worker : workers) configEventBus.register(worker);
 
         return configEventBus;
